@@ -94,6 +94,12 @@
 
 Logic Apps orchestrate – Functions encapsulate logic
 
+#### Hands On (Guided)
+
+- Build a Durable Functions approval workflow
+- Harden the workflow with error handling, idempotency, and retry logic
+- Trigger the workflow from an external web app form
+
 ---
 
 ## Day 2 – Enterprise Scenarios, Governance & Operations
