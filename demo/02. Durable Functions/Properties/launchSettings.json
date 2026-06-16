@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "_02__Durable_Functions": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7185",
+      "launchBrowser": false
+    }
+  }
+}

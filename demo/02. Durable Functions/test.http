@@ -1,0 +1,24 @@
+@functionHost = http://localhost:7071
+
+### Start device provisioning workflow
+# @name startDeviceProvisioning
+POST {{functionHost}}/api/devices/provision
+Content-Type: application/json
+
+{
+  "id": "EMP-1043",
+  "name": "Ivana",
+  "email": "ivana@proximus.be",
+  "department": "Proximus",
+  "role": "Technican",
+  "startDate": "2026-08-22",
+  "status": "Pending",
+  "manager": "Karim",
+  "description": "",
+  "createdAt": "2026-06-15",
+  "source": "pxs-workflows",
+  "submittedAt": "2026-06-15T12:34:20.698Z"
+}
+
+### Check workflow status
+GET {{startDeviceProvisioning.response.body.$.statusQueryGetUri}}

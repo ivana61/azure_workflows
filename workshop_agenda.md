@@ -99,6 +99,7 @@ Logic Apps orchestrate – Functions encapsulate logic
 - Build a Durable Functions approval workflow
 - Harden the workflow with error handling, idempotency, and retry logic
 - Trigger the workflow from an external web app form
+- Deploy the workflow infrastructure with Bicep and publish the Function App
 
 ---
 
