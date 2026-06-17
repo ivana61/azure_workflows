@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>External Approval Client</title>
+  <style>
+    body {
+      font-family: Segoe UI, Arial, sans-serif;
+      margin: 2rem;
+      max-width: 1100px;
+    }
+
+    fieldset {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-top: 0.75rem;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      box-sizing: border-box;
+      font: inherit;
+      margin-top: 0.25rem;
+      padding: 0.5rem;
+      width: 100%;
+    }
+
+    button {
+      cursor: pointer;
+      margin-top: 1rem;
+      width: auto;
+    }
+
+    .row {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    pre {
+      background: #111827;
+      border-radius: 8px;
+      color: #e5e7eb;
+      min-height: 160px;
+      overflow: auto;
+      padding: 1rem;
+      white-space: pre-wrap;
+    }
+
+    .hint {
+      color: #555;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>External Approval Client</h1>
+  <p class="hint">
+    This page is a separate browser app. It calls the Azure Functions approval workflow over HTTP.
+  </p>
+
+  <fieldset>
+    <legend>Connection</legend>
+    <div class="row">
+      <label>
+        Functions API base URL
+        <input id="baseUrl" value="http://localhost:7071/api">
+      </label>
+      <label>
+        Function key (optional)
+        <input id="functionKey" type="password" placeholder="Only needed for function-level auth">
+      </label>
+    </div>
+    <button id="saveConfigButton" type="button">Save connection settings</button>
+    <p class="hint">
+      For local Lab 02 or Lab 03 endpoints, leave the function key empty. For function-level authorization, use a function or host key.
+    </p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Start approval workflow</legend>
+    <div class="row">
+      <label>
+        Request ID
+        <input id="requestId" value="REQ-WEB-1001">
+      </label>
+      <label>
+        Requester
+        <input id="requester" value="Nina">
+      </label>
+      <label>
+        Item
+        <input id="item" value="Conference travel">
+      </label>
+      <label>
+        Amount
+        <input id="amount" type="number" value="250">
+      </label>
+      <label>
+        Timeout minutes
+        <input id="timeoutMinutes" type="number" value="5">
+      </label>
+    </div>
+    <label>
+      Business justification
+      <textarea id="businessJustification">Submitted from an external web app.</textarea>
+    </label>
+    <div>
+      <label>
+        <input id="simulateNotificationFailure" type="checkbox" style="width:auto">
+        Simulate one transient notification failure (Lab 03 only)
+      </label>
+    </div>
+    <button id="startButton" type="button">Start approval</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Check status</legend>
+    <label>
+      Status query URL
+      <input id="statusUrl" placeholder="Populated after start">
+    </label>
+    <button id="statusButton" type="button">Get status</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Submit approval decision</legend>
+    <div class="row">
+      <label>
+        Instance ID
+        <input id="instanceId" placeholder="Populated after start">
+      </label>
+      <label>
+        Decision ID
+        <input id="decisionId" value="DEC-WEB-1001">
+      </label>
+      <label>
+        Approver
+        <input id="approver" value="Alex">
+      </label>
+      <label>
+        Decision
+        <select id="approved">
+          <option value="true">Approve</option>
+          <option value="false">Reject</option>
+        </select>
+      </label>
+    </div>
+    <label>
+      Decision comments
+      <textarea id="decisionComments">Approved from the external web app.</textarea>
+    </label>
+    <button id="decisionButton" type="button">Submit decision</button>
+  </fieldset>
+
+  <h2>Last response</h2>
+  <pre id="output">Ready.</pre>
+
+  <script>
+    const state = {
+      baseUrl: "http://localhost:7071/api",
+      functionKey: "",
+      statusUrl: "",
+      instanceId: ""
+    };
+
+    const byId = (id) => document.getElementById(id);
+
+    function writeOutput(value) {
+      byId("output").textContent = typeof value === "string"
+        ? value
+        : JSON.stringify(value, null, 2);
+    }
+
+    function loadConfig() {
+      state.baseUrl = localStorage.getItem("approvalClient.baseUrl") || state.baseUrl;
+      state.functionKey = localStorage.getItem("approvalClient.functionKey") || "";
+      byId("baseUrl").value = state.baseUrl;
+      byId("functionKey").value = state.functionKey;
+    }
+
+    function saveConfig() {
+      state.baseUrl = byId("baseUrl").value.trim().replace(/\/+$/, "");
+      state.functionKey = byId("functionKey").value.trim();
+      localStorage.setItem("approvalClient.baseUrl", state.baseUrl);
+      localStorage.setItem("approvalClient.functionKey", state.functionKey);
+      writeOutput({ message: "Connection settings saved.", baseUrl: state.baseUrl });
+    }
+
+    function apiUrl(path) {
+      return `${state.baseUrl}${path}`;
+    }
+
+    function headers(includeJson = true) {
+      const result = {};
+      if (includeJson) {
+        result["content-type"] = "application/json";
+      }
+
+      if (state.functionKey) {
+        result["x-functions-key"] = state.functionKey;
+      }
+
+      return result;
+    }
+
+    async function readResponse(response) {
+      const text = await response.text();
+      let body = text;
+
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = text;
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: {
+          idempotencyResult: response.headers.get("x-idempotency-result")
+        },
+        body
+      };
+    }
+
+    async function sendJson(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(payload)
+      });
+
+      return await readResponse(response);
+    }
+
+    async function startApproval() {
+      const payload = {
+        requestId: byId("requestId").value.trim(),
+        requester: byId("requester").value.trim(),
+        item: byId("item").value.trim(),
+        amount: Number(byId("amount").value),
+        timeoutMinutes: Number(byId("timeoutMinutes").value),
+        businessJustification: byId("businessJustification").value,
+        simulateNotificationFailure: byId("simulateNotificationFailure").checked
+      };
+
+      const result = await sendJson(apiUrl("/approvals"), payload);
+      const body = result.body || {};
+
+      state.instanceId = body.id || payload.requestId;
+      state.statusUrl = body.statusQueryGetUri || "";
+
+      byId("instanceId").value = state.instanceId;
+      byId("statusUrl").value = state.statusUrl;
+
+      writeOutput({
+        request: payload,
+        response: result,
+        nextStep: payload.amount > 100
+          ? "Submit a decision before the timeout expires."
+          : "Low-value requests should auto-approve. Check status."
+      });
+    }
+
+    async function getStatus() {
+      const statusUrl = byId("statusUrl").value.trim();
+      if (!statusUrl) {
+        writeOutput("No status URL is available. Start an approval first.");
+        return;
+      }
+
+      const response = await fetch(statusUrl, {
+        method: "GET",
+        headers: headers(false)
+      });
+
+      writeOutput(await readResponse(response));
+    }
+
+    async function submitDecision() {
+      const instanceId = byId("instanceId").value.trim();
+      if (!instanceId) {
+        writeOutput("No instance ID is available. Start an approval first.");
+        return;
+      }
+
+      const payload = {
+        decisionId: byId("decisionId").value.trim(),
+        approved: byId("approved").value === "true",
+        approver: byId("approver").value.trim(),
+        comments: byId("decisionComments").value
+      };
+
+      const result = await sendJson(apiUrl(`/approvals/${encodeURIComponent(instanceId)}/decision`), payload);
+      writeOutput({ request: payload, response: result });
+    }
+
+    byId("saveConfigButton").addEventListener("click", saveConfig);
+    byId("startButton").addEventListener("click", startApproval);
+    byId("statusButton").addEventListener("click", getStatus);
+    byId("decisionButton").addEventListener("click", submitDecision);
+
+    loadConfig();
+  </script>
+</body>
+</html>
