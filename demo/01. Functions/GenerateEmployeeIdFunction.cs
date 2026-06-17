@@ -22,7 +22,7 @@ public sealed class GenerateEmployeeIdFunction
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "employees/generate-id")] HttpRequest request)
     {
-        GenerateEmployeeIdRequest? payload;
+        GenerateEmployeeIdRequest? employeeIdRequest = null;
 
         try
         {
@@ -37,7 +37,7 @@ public sealed class GenerateEmployeeIdFunction
                 return new OkResult();
             }
 
-            payload = document.RootElement.TryGetProperty("employee", out var employeeElement)
+            employeeIdRequest = document.RootElement.TryGetProperty("employee", out var employeeElement)
                 ? employeeElement.Deserialize<GenerateEmployeeIdRequest>(JsonOptions)
                 : document.RootElement.Deserialize<GenerateEmployeeIdRequest>(JsonOptions);
         }
@@ -49,7 +49,7 @@ public sealed class GenerateEmployeeIdFunction
             });
         }
 
-        var name = NormalizeNamePart(payload?.Name);
+        var name = NormalizeNamePart(employeeIdRequest?.Name);
 
         if (name.Length < 3)
         {
