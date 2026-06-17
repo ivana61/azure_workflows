@@ -3,8 +3,8 @@ content-type: application/json
 
 {
   "id": "EMP-1043",
-  "name": "Ivana",
-  "email": "ivana@proximus.be",
+  "name": "Nico Vermeir",
+  "email": "nico.vermeir@proximus.be",
   "department": "Proximus",
   "role": "Technican",
   "startDate": "2026-08-22",
@@ -16,14 +16,15 @@ content-type: application/json
   "submittedAt": "2026-06-15T12:34:20.698Z"
 }
 
+###
 
-POST https://func-prox-demo-01.azurewebsites.net/api/employees/generate-id HTTP/1.1
+POST http://localhost:7071/api/employees/generate-id HTTP/1.1
 content-type: application/json
 
 {
   "id": "",
-  "name": "Ivana",
-  "email": "ivana@proximus.be",
+  "name": "Nico Vermeir",
+  "email": "nico.vermeir@proximus.be",
   "department": "Proximus",
   "role": "Technican",
   "startDate": "2026-08-22",

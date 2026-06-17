@@ -7,8 +7,8 @@ Content-Type: application/json
 
 {
   "id": "EMP-1043",
-  "name": "Ivana",
-  "email": "ivana@proximus.be",
+  "name": "Nico Vermeir",
+  "email": "nico.vermeir@proximus.be",
   "department": "Proximus",
   "role": "Technican",
   "startDate": "2026-08-22",
@@ -19,6 +19,3 @@ Content-Type: application/json
   "source": "pxs-workflows",
   "submittedAt": "2026-06-15T12:34:20.698Z"
 }
-
-### Check workflow status
-GET {{startDeviceProvisioning.response.body.$.statusQueryGetUri}}
